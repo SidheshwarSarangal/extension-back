@@ -1,0 +1,1 @@
+chrome.runtime.onMessage.addListener(((e,s,r)=>{if("RUN_LOGIC"===e.type){let e=document.body.innerText||"No text found on page.";return chrome.runtime.sendMessage({type:"GET_GROQ_RESPONSE",pageText:e},(e=>{e&&"success"===e.status?r({status:"done",aiResponse:e.response}):(console.error("❌ Error fetching AI response:",e?.message),r({status:"error",error:e?.message}))})),!0}}));
