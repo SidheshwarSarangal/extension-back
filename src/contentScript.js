@@ -1,7 +1,7 @@
 import html2canvas from "html2canvas";
 
 async function captureFullPage() {
-    console.log("📸 Starting full-page screenshot capture...");
+    console.log("📸 Starting smart visual content extraction...");
 
     const totalHeight = document.body.scrollHeight;
     const viewportHeight = window.innerHeight;
@@ -9,36 +9,47 @@ async function captureFullPage() {
     let images = [];
 
     while (currentPosition < totalHeight) {
-        console.log(`📜 Capturing at scroll position: ${currentPosition}...`);
-
-        // Scroll down
         window.scrollTo(0, currentPosition);
-        await new Promise(resolve => setTimeout(resolve, 800)); // 🕒 Wait for rendering
+        await new Promise(resolve => setTimeout(resolve, 800)); // Allow render
 
-        // ✅ Request screenshot from `background.js`
-        const response = await new Promise(resolve => {
-            chrome.runtime.sendMessage({ type: "CAPTURE_SCREENSHOT" }, resolve);
-        });
+        const visualElements = [...document.querySelectorAll('img, canvas, .chartjs, .highcharts-container, .plotly')]
+            .filter(el => {
+                const rect = el.getBoundingClientRect();
+                return rect.top < window.innerHeight && rect.bottom > 0;
+            });
 
-        if (response && response.status === "success") {
-            console.log(`✅ Screenshot captured at position ${currentPosition}`);
-            images.push({ image: response.image, position: currentPosition });
+        if (visualElements.length > 0) {
+            console.log(`📸 Visual content detected at ${currentPosition}, extracting...`);
+
+            for (let el of visualElements) {
+                if (el.tagName === 'IMG') {
+                    images.push({
+                        type: 'img',
+                        src: el.src,
+                        position: currentPosition
+                    });
+                } else if (el.tagName === 'CANVAS') {
+                    images.push({
+                        type: 'canvas',
+                        dataURL: el.toDataURL(),
+                        position: currentPosition
+                    });
+                }
+            }
         } else {
-            console.error(`❌ Screenshot capture failed at position ${currentPosition}`);
+            console.log(`⏩ Skipping ${currentPosition}, no visual content.`);
         }
 
-        // Move down
         currentPosition += viewportHeight;
     }
 
-    // Reset scroll position to top
     window.scrollTo(0, 0);
+    console.log("✅ Finished extracting visual content.");
 
-    console.log("✅ Finished capturing all images.");
-    
-    // ✅ Send images back to `popup.js`
-    chrome.runtime.sendMessage({ type: "SCREENSHOTS_READY", images });
+    // ✅ Send to background
+    chrome.runtime.sendMessage({ type: "VISUAL_CONTENT_EXTRACTED", images });
 }
+
 
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {

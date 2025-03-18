@@ -59,7 +59,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 });
 
-
+/*
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === "SCREENSHOTS_READY") {
         console.log("📸 Full-page screenshots received:", message.images);
@@ -71,3 +71,4 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ status: "received" });
     }
 });
+*/
