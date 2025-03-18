@@ -1,12 +1,12 @@
 import html2canvas from "html2canvas";
-
 async function captureFullPage() {
     console.log("📸 Starting smart visual content extraction...");
 
     const totalHeight = document.body.scrollHeight;
     const viewportHeight = window.innerHeight;
     let currentPosition = 0;
-    let images = [];
+
+    const uniqueImages = new Set();
 
     while (currentPosition < totalHeight) {
         window.scrollTo(0, currentPosition);
@@ -23,17 +23,17 @@ async function captureFullPage() {
 
             for (let el of visualElements) {
                 if (el.tagName === 'IMG') {
-                    images.push({
+                    // Ensure uniqueness by src
+                    uniqueImages.add(JSON.stringify({
                         type: 'img',
-                        src: el.src,
-                        position: currentPosition
-                    });
+                        src: el.src
+                    }));
                 } else if (el.tagName === 'CANVAS') {
-                    images.push({
+                    // Use dataURL for uniqueness
+                    uniqueImages.add(JSON.stringify({
                         type: 'canvas',
-                        dataURL: el.toDataURL(),
-                        position: currentPosition
-                    });
+                        dataURL: el.toDataURL()
+                    }));
                 }
             }
         } else {
@@ -45,6 +45,9 @@ async function captureFullPage() {
 
     window.scrollTo(0, 0);
     console.log("✅ Finished extracting visual content.");
+
+    // Convert the Set to array of objects
+    const images = Array.from(uniqueImages).map(item => JSON.parse(item));
 
     // ✅ Send to background
     chrome.runtime.sendMessage({ type: "VISUAL_CONTENT_EXTRACTED", images });

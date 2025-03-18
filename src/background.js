@@ -1,4 +1,4 @@
-import { fetchGroqResponse, analyzeBase64Image } from "./groqRequest.js";
+import { fetchGroqResponse, analyzeVisualContent } from "./groqRequest.js";
 
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -56,7 +56,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true; // Keeps sendResponse callback open
     }*/
 
-    if (message.type === "CAPTURE_SCREENSHOT") {
+   /* if (message.type === "CAPTURE_SCREENSHOT") {
         console.log("📸 Capturing screenshot...");
 
         chrome.tabs.captureVisibleTab(null, { format: "png" }, async (image) => {
@@ -68,33 +68,60 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 
                 console.log("🖼️ Base64 Image Data URL:", image);
 
-               /* const base64Image = image.replace(/^data:image\/png;base64,/, '');
+                const base64Image = image.replace(/^data:image\/png;base64,/, '');
 
                 const analysisResult = await analyzeBase64Image(base64Image);
                 
-                console.log("🤖 AI Analysis Result:", analysisResult); */
+                console.log("🤖 AI Analysis Result:", analysisResult); 
 
-                sendResponse({ status: "success" /*, image , analysis: analysisResult */});
+                sendResponse({ status: "success" , image , analysis: analysisResult });
             }
         });
 
         return true; // Keeps sendResponse callback open for async
-    }
+    }*/
 
-    if (message.type === "VISUAL_CONTENT_EXTRACTED") {
-        console.log("🖼️ Received visual content from content script:", message.images);
-
-        // Loop and display each image/canvas
-        message.images.forEach((imgObj, index) => {
-            if (imgObj.type === 'img') {
-                console.log(`📷 IMG [${index}]:`, imgObj.src);
-            } else if (imgObj.type === 'canvas') {
-                console.log(`🖌️ CANVAS [${index}]:`, imgObj.dataURL);
+    /*if (message.type === "VISUAL_CONTENT_EXTRACTED") {
+        (async () => {
+            console.log("🖼️ Received visual content from content script:", message.images);
+    
+            for (const imgObj of message.images) {
+                
+                const result = await analyzeVisualContent(imgObj.dataURL.src);
+                console.log(`🧠 AI Analysis Result for one visual element:`, result);
             }
-        });
+    
+            sendResponse({ status: "analysis_complete" });
+        })();
+    
+        return true; // ✅ Ensures sendResponse is expected after async finishes
+    }*/
+        if (message.type === "VISUAL_CONTENT_EXTRACTED") {
+            (async () => {
+                //console.log("🖼️ Received visual content from content script:", message.images);
+        
+                for (const imgObj of message.images) {
+                    // Check if the image source is a direct URL (http/https) not base64
+                    if (imgObj.type === 'img' && imgObj.src.startsWith('http')) {
+                        const result = await analyzeVisualContent(imgObj.src);
+                        console.log(`🧠 AI Analysis Result for:`, imgObj.src);
+                        console.log(`🧠 AI Analysis Result for one visual element:`, result.analysis);
 
-        sendResponse({ status: "received" });
-    }
+                    } else {
+                        console.log('⏩ Skipping non-image or unsupported source:', imgObj);
+                    }
+                }
+        
+                sendResponse({ status: "analysis_complete" });
+            })();
+        
+            return true; // ✅ Ensures sendResponse is expected after async finishes
+        }
+        
+    
+
+
+
 });
 
 

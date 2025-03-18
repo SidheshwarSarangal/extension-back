@@ -46,12 +46,19 @@ export async function fetchGroqResponse(pageText) {
     }
 }
 
-export async function analyzeBase64Image(base64Image) {
+export async function analyzeVisualContent(imageData) {
     try {
+       // console.log("🧠 Starting Groq AI analysis of visual content...");
 
+        // Load API Key from config
         const response = await fetch(chrome.runtime.getURL("config.json"));
         const config = await response.json();
         const API_KEY = config.API_KEY;
+
+        if (!API_KEY) {
+            console.error("❌ Groq API Key is missing!");
+            return { analysis: "Error: Missing API Key" };
+        }
 
         const groq = new Groq({ apiKey: API_KEY });
 
@@ -63,12 +70,15 @@ export async function analyzeBase64Image(base64Image) {
                     content: [
                         {
                             type: "text",
-                            text: "If the image contains a statistical graph, chart, or data visualization, describe it. Otherwise, return NULL."
+                            text: `If the image contains a statistical graph, chart, or data visualization, analyze the data and provide ONLY the key conclusions or insights as clear, vertical bullet points (one per line). 
+                            - Do NOT describe the chart, bars, colors, or general appearance. 
+                            - Do NOT write conclusions in a horizontal paragraph. 
+                            - If no statistical data is present, just respond with 'nothing found' and nothing else.`
                         },
                         {
                             type: "image_url",
                             image_url: {
-                                url: `data:image/png;base64,${base64Image}`
+                                url: `${imageData}`
                             }
                         }
                     ]
@@ -77,9 +87,12 @@ export async function analyzeBase64Image(base64Image) {
             max_completion_tokens: 1024
         });
 
-        return chatCompletion.choices[0].message.content;
+        //console.log("✅ Groq AI Analysis Complete");
+        return {
+            analysis: chatCompletion.choices[0].message.content
+        };
     } catch (error) {
-        console.error("❌ Error analyzing image:", error);
-        return `Error: ${error.message}`;
+        console.error("❌ Error analyzing visual content with Groq:", error);
+        return { analysis: `Error: ${error.message}` };
     }
 }
