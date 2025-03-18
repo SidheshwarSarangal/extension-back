@@ -54,14 +54,42 @@ async function captureFullPage() {
 }
 
 
+function cleanWebPageText(rawText) {
+    return rawText
+        // Remove common navigation or UI sections
+        .replace(/(?:^|\n)(Skip to content|English|Select a language|High Contrast|Customer Support|Contact Sales|Log in|About|Products|Solutions|Pricing|Resources|Start free or get a demo)(?:\n|$)/gi, '')
+        
+        // Remove social media references
+        .replace(/\b(facebook|linkedin|twitter|instagram|youtube|pinterest)\b/gi, '')
+        
+        // Remove CTAs and promotional repeated lines
+        .replace(/Download (HubSpot|Report|Now|the Report).*?\n/gi, '')
+        .replace(/(Scroll (Right|Left)|Click here|Get Started|Learn More|Start Now)/gi, '')
+        
+        // Remove common page headers/footers (generalized)
+        .replace(/^\s*(Home|Terms of Service|Privacy Policy|Contact Us|Subscribe|Unsubscribe|Sitemap)\s*$/gim, '')
+        
+        // Remove any generic repetitive phrases often useless for LLM analysis
+        .replace(/(?:\n|\s)(All rights reserved|Copyright.*?(\d{4})?|©\s*\d{4}).*/gi, '')
+        
+        // Remove extra newlines or spaces
+        .replace(/\n{2,}/g, '\n')
+        .replace(/[ \t]{2,}/g, ' ')
+        .trim();
+}
+
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === "RUN_LOGIC") {
         console.log("📄 Extracting page text...");
 
         let pageText = document.body.innerText || "No text found on page.";
+        const cleanedText = cleanWebPageText(pageText);
+        console.log(cleanedText);
+        
 
-        chrome.runtime.sendMessage({ type: "GET_GROQ_RESPONSE", pageText }, (response) => {
+
+        chrome.runtime.sendMessage({ type: "GET_GROQ_RESPONSE", cleanedText }, (response) => {
             if (response && response.status === "success") {
                 console.log("🤖 AI Response:", response.response);
                 sendResponse({ status: "done", aiResponse: response.response });

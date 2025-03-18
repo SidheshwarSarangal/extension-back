@@ -6,7 +6,6 @@ export async function fetchGroqResponse(pageText) {
             return { response: "No text found to get converted.", totalTokens: 0 };
         }
 
-        console.log("🔄 Fetching API key from config.json...");
 
         const response = await fetch(chrome.runtime.getURL("config.json"));
         const config = await response.json();
@@ -17,7 +16,6 @@ export async function fetchGroqResponse(pageText) {
             return { response: "Error: Missing API Key in config.json", totalTokens: 0 };
         }
 
-        console.log("🔑 Loaded API Key:", API_KEY);
 
         const groq = new Groq({ apiKey: API_KEY });
 
@@ -46,10 +44,20 @@ export async function fetchGroqResponse(pageText) {
     }
 }
 
-export async function analyzeVisualContent(imageData) {
-    try {
-       // console.log("🧠 Starting Groq AI analysis of visual content...");
+async function convertImageUrlToBase64(imageUrl) {
+    const response = await fetch(imageUrl);
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result.split(',')[1]); // Base64 only
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+}
 
+
+export async function analyzeVisualContent(imageUrl) {
+    try {
         // Load API Key from config
         const response = await fetch(chrome.runtime.getURL("config.json"));
         const config = await response.json();
@@ -59,6 +67,9 @@ export async function analyzeVisualContent(imageData) {
             console.error("❌ Groq API Key is missing!");
             return { analysis: "Error: Missing API Key" };
         }
+
+        // Convert the image URL to base64
+        const base64Image = await convertImageUrlToBase64(imageUrl);
 
         const groq = new Groq({ apiKey: API_KEY });
 
@@ -78,7 +89,7 @@ export async function analyzeVisualContent(imageData) {
                         {
                             type: "image_url",
                             image_url: {
-                                url: `${imageData}`
+                                url: `data:image/jpeg;base64,${base64Image}`
                             }
                         }
                     ]
@@ -87,7 +98,6 @@ export async function analyzeVisualContent(imageData) {
             max_completion_tokens: 1024
         });
 
-        //console.log("✅ Groq AI Analysis Complete");
         return {
             analysis: chatCompletion.choices[0].message.content
         };
